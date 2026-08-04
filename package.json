@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "postbuild": "node scripts/prepare-github-pages.mjs",
     "preview": "vite preview",
     "check": "oxlint src vite.config.ts && tsc --noEmit",
     "vp:dev": "vp dev",

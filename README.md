@@ -159,6 +159,32 @@ npm run vp:build
 npm run vp:check
 ```
 
+## GitHub Pages
+
+这个项目部署到 GitHub Pages 的仓库路径是 `/demo/`，所以 `vite.config.ts` 里配置了：
+
+```ts
+base: "/demo/"
+```
+
+Wouter 也会读取 `import.meta.env.BASE_URL` 作为路由 base，因此线上路径可以是：
+
+```txt
+https://tj-strange.github.io/demo/tasks/task-media
+```
+
+GitHub Pages 是静态托管，直接访问 SPA 子路由时没有服务器 fallback。项目的 `postbuild` 会自动把 `dist/index.html` 复制成 `dist/404.html`，让子路由刷新或直达时仍然加载 React 应用。
+
+```bash
+npm run build
+```
+
+如果控制台出现 404，可以按 URL 判断：
+
+- `/assets/...` 404：通常是没有使用带 `base: "/demo/"` 的最新构建产物。
+- `/demo/tasks/...` 404：通常是缺少 `dist/404.html` fallback。
+- `/demo/assets/*.jpg` 或 `/demo/assets/*.mov` 404：通常是图片/视频没有被提交到仓库，或 GitHub Pages 没部署最新 `dist`。
+
 ## Media Assets
 
 后续图片和视频可以放在：
