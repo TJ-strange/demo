@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --motion-fast: 150ms;
+  --motion-normal: 220ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+textarea:focus-visible,
+input:focus-visible {
+  outline: none;
+}
+
+::selection {
+  background: #18181b;
+  color: #fafafa;
+}
+
+.dark ::selection {
+  background: #fafafa;
+  color: #18181b;
+}
+
+.interactive {
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out);
+}
+
+.interactive:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.interactive:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.originkit-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.originkit-card::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(120deg, transparent, rgb(255 255 255 / 0.2), transparent);
+  opacity: 0;
+  transform: translateX(-80%);
+  transition:
+    opacity var(--motion-normal) var(--ease-out),
+    transform 520ms var(--ease-out);
+}
+
+.originkit-card:hover::after {
+  opacity: 1;
+  transform: translateX(80%);
+}
+
+.originkit-focus {
+  transition:
+    border-color var(--motion-normal) var(--ease-out),
+    box-shadow var(--motion-normal) var(--ease-out),
+    transform var(--motion-normal) var(--ease-out);
+}
+
+.originkit-focus:focus-within {
+  border-color: #a1a1aa;
+  box-shadow:
+    0 0 0 4px rgb(113 113 122 / 0.08),
+    0 14px 44px rgb(24 24 27 / 0.08);
+  transform: translateY(-1px);
+}
+
+.dark .originkit-focus:focus-within {
+  border-color: #52525b;
+  box-shadow:
+    0 0 0 4px rgb(212 212 216 / 0.08),
+    0 14px 44px rgb(0 0 0 / 0.24);
+}
+
+.message-enter {
+  animation: message-enter 260ms var(--ease-out) both;
+}
+
+.context-enter {
+  animation: context-enter 220ms var(--ease-out) both;
+}
+
+.media-pop {
+  animation: media-pop 260ms var(--ease-out) both;
+}
+
+.media-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #e4e4e7 0%, #f4f4f5 42%, #e4e4e7 78%);
+  background-size: 220% 100%;
+  animation: skeleton-sweep 1.15s ease-in-out infinite;
+}
+
+.dark .media-skeleton {
+  background: linear-gradient(90deg, #27272a 0%, #3f3f46 42%, #27272a 78%);
+  background-size: 220% 100%;
+}
+
+.stream-cursor {
+  display: inline-block;
+  width: 0.55ch;
+  height: 1.15em;
+  margin-left: 2px;
+  vertical-align: -0.18em;
+  background: currentColor;
+  animation: blink 900ms steps(2, jump-none) infinite;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+@keyframes message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes context-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes media-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
