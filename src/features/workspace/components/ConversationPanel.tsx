@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, ChevronLeft, ChevronRight, Terminal, User, X } from "lucide-react";
-import { useAtomValue } from "jotai";
-import { currentMessagesAtom, localeAtom, workspaceAtom } from "../../../state/workspaceState";
+import { Bot, ChevronLeft, ChevronRight, Play, Terminal, User, X } from "lucide-react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { useTranslation } from "react-i18next";
+import { currentMessagesAtom, localeAtom, resumeMessageRequestAtom, workspaceAtom } from "../../../state/workspaceState";
 import type { MediaAsset, MessageRole } from "../../../app/types";
 import { getLocalizedText } from "../../../app/localized";
 
@@ -13,9 +14,11 @@ const icons: Record<MessageRole, typeof User> = {
 };
 
 export function ConversationPanel() {
+  const { t } = useTranslation();
   const messages = useAtomValue(currentMessagesAtom);
   const workspace = useAtomValue(workspaceAtom);
   const locale = useAtomValue(localeAtom);
+  const requestResumeMessage = useSetAtom(resumeMessageRequestAtom);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewer, setViewer] = useState<{ assetIds: string[]; index: number } | null>(null);
   const mediaById = useMemo(
@@ -66,6 +69,30 @@ export function ConversationPanel() {
                   {getLocalizedText(message.content, locale)}
                   {message.streaming ? <span className="stream-cursor" /> : null}
                 </p>
+                {message.cancelled ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex h-7 items-center rounded-md border border-zinc-200 bg-zinc-100 px-2.5 text-[11px] font-medium text-zinc-500 dark:border-[#52525B] dark:bg-[#3F3F46] dark:text-zinc-300">
+                      {locale === "zh-CN" ? "已停止" : "Stopped"}
+                    </span>
+                    {message.role === "assistant" && !message.mediaAssetIds?.length ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          requestResumeMessage({
+                            messageId: message.id,
+                            taskId: message.taskId,
+                            locale,
+                            requestId: crypto.randomUUID(),
+                          })
+                        }
+                        className="interactive inline-flex h-7 items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-2.5 text-[11px] font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-[#52525B] dark:bg-[#2F2F34] dark:text-zinc-100 dark:hover:bg-[#3A3A40]"
+                      >
+                        <Play size={11} />
+                        {t("composer.resume")}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
                 {message.mediaAssetIds?.length ? (
                   <MediaThumbnailGrid
                     assets={message.mediaAssetIds.map((id) => mediaById.get(id)).filter(Boolean) as MediaAsset[]}

@@ -25,9 +25,9 @@ export function MobileDrawer({ side, open, onClose, children }: MobileDrawerProp
           side === "left" ? "left-0 border-r" : "right-0 border-l"
         } ${open ? "translate-x-0" : side === "left" ? "-translate-x-full" : "translate-x-full"}`}
       >
-        <div className="absolute right-3 top-3 z-10">
-          <IconButton label="Close drawer" onClick={onClose}>
-            <X size={17} />
+        <div className="absolute right-2 top-2 z-10">
+          <IconButton label="Close drawer" onClick={onClose} className="size-8!">
+            <X size={16} />
           </IconButton>
         </div>
         {children}

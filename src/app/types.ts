@@ -29,6 +29,7 @@ export interface Message {
   mediaLoading?: boolean;
   visibleMediaCount?: number;
   streaming?: boolean;
+  cancelled?: boolean;
 }
 
 export interface WorkspaceFile {

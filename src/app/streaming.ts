@@ -1,5 +1,10 @@
 import type { Locale, LocalizedText } from "./types";
 
+export interface MockStreamPlan {
+  locale: Locale;
+  segments: string[];
+}
+
 const responses: LocalizedText[] = [
   {
     "zh-CN":
@@ -27,16 +32,62 @@ const responses: LocalizedText[] = [
   },
 ];
 
-const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+function createAbortError() {
+  return new DOMException("The stream was aborted.", "AbortError");
+}
 
-export async function* mockAssistantStream(locale: Locale) {
+export function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+export function delay(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(createAbortError());
+      return;
+    }
+
+    const cleanup = () => signal?.removeEventListener("abort", abort);
+    const timer = window.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    const abort = () => {
+      window.clearTimeout(timer);
+      cleanup();
+      reject(createAbortError());
+    };
+
+    signal?.addEventListener("abort", abort, { once: true });
+  });
+}
+
+export function createMockStreamPlan(locale: Locale): MockStreamPlan {
   const response = responses[Math.floor(Math.random() * responses.length)] ?? responses[0];
   const text = response[locale];
-  const segments = text.match(/.{1,3}/g) ?? [text];
+  return {
+    locale,
+    segments: text.match(/.{1,3}/g) ?? [text],
+  };
+}
 
-  for (const segment of segments) {
+export async function* streamMockPlan(plan: MockStreamPlan, startIndex: number, signal?: AbortSignal) {
+  for (let index = startIndex; index < plan.segments.length; index += 1) {
+    if (signal?.aborted) throw createAbortError();
     // eslint-disable-next-line no-await-in-loop -- streaming chunks must arrive sequentially.
-    await delay(18 + Math.random() * 120);
-    yield segment;
+    await delay(18 + Math.random() * 120, signal);
+    yield {
+      chunk: plan.segments[index] ?? "",
+      nextIndex: index + 1,
+    };
+  }
+}
+
+export async function* mockAssistantStream(locale: Locale, signal?: AbortSignal) {
+  const plan = createMockStreamPlan(locale);
+
+  for await (const item of streamMockPlan(plan, 0, signal)) {
+    // eslint-disable-next-line no-await-in-loop -- streaming chunks must arrive sequentially.
+    yield item.chunk;
   }
 }

@@ -11,6 +11,7 @@ export const localeAtom = atom<Locale>("zh-CN");
 export const themeAtom = atom<"light" | "dark">("light");
 export const selectedAssetIdAtom = atom<string | null>(initialWorkspaceData.media[0]?.id ?? null);
 export const isGeneratingAtom = atom(false);
+export const resumeMessageRequestAtom = atom<{ messageId: string; taskId: string; locale: Locale; requestId: string } | null>(null);
 export const leftDrawerOpenAtom = atom(false);
 export const rightDrawerOpenAtom = atom(false);
 
@@ -57,8 +58,20 @@ const pickRandomIds = (ids: string[], count: number) => {
   return shuffled.slice(0, count);
 };
 
-export const addUserMessageAtom = atom(null, (get, set, content: string) => {
-  const taskId = get(currentTaskIdAtom);
+type UserMessagePayload = string | { content: string; taskId?: string };
+
+type TaskScopedPayload = { taskId?: string };
+
+type MediaPreviewPayload = MediaKind | ({ kind: MediaKind } & TaskScopedPayload);
+
+const resolveUserMessagePayload = (payload: UserMessagePayload, fallbackTaskId: string) =>
+  typeof payload === "string" ? { content: payload, taskId: fallbackTaskId } : { content: payload.content, taskId: payload.taskId ?? fallbackTaskId };
+
+const resolveMediaPreviewPayload = (payload: MediaPreviewPayload, fallbackTaskId: string) =>
+  typeof payload === "string" ? { kind: payload, taskId: fallbackTaskId } : { kind: payload.kind, taskId: payload.taskId ?? fallbackTaskId };
+
+export const addUserMessageAtom = atom(null, (get, set, payload: UserMessagePayload) => {
+  const { content, taskId } = resolveUserMessagePayload(payload, get(currentTaskIdAtom));
 
   set(
     workspaceAtom,
@@ -78,8 +91,8 @@ export const addUserMessageAtom = atom(null, (get, set, content: string) => {
   );
 });
 
-export const createAssistantMessageAtom = atom(null, (get, set) => {
-  const taskId = get(currentTaskIdAtom);
+export const createAssistantMessageAtom = atom(null, (get, set, payload?: TaskScopedPayload) => {
+  const taskId = payload?.taskId ?? get(currentTaskIdAtom);
   const messageId = crypto.randomUUID();
 
   set(
@@ -128,8 +141,36 @@ export const finishAssistantMessageAtom = atom(null, (_get, set, messageId: stri
   );
 });
 
-export const createMediaPreviewMessageAtom = atom(null, (get, set, kind: MediaKind) => {
-  const taskId = get(currentTaskIdAtom);
+export const resumeAssistantMessageAtom = atom(null, (_get, set, messageId: string) => {
+  set(
+    workspaceAtom,
+    produce((draft) => {
+      const message = draft.messages.find((item) => item.id === messageId);
+      if (message) {
+        // 恢复时复用同一条消息：清掉“已停止”标记，并重新显示流式光标。
+        message.streaming = true;
+        message.cancelled = false;
+      }
+    }),
+  );
+});
+
+export const cancelAssistantMessageAtom = atom(null, (_get, set, messageId: string) => {
+  set(
+    workspaceAtom,
+    produce((draft) => {
+      const message = draft.messages.find((item) => item.id === messageId);
+      if (message) {
+        // 用户停止时保留已生成内容，只结束流式光标并记录取消状态。
+        message.streaming = false;
+        message.cancelled = true;
+      }
+    }),
+  );
+});
+
+export const createMediaPreviewMessageAtom = atom(null, (get, set, payload: MediaPreviewPayload) => {
+  const { kind, taskId } = resolveMediaPreviewPayload(payload, get(currentTaskIdAtom));
   const messageId = crypto.randomUUID();
   let selectedCount = 0;
 
@@ -225,6 +266,25 @@ export const finishMediaPreviewMessageAtom = atom(null, (_get, set, messageId: s
             firstAsset?.kind === "image"
               ? `Selected ${selectedCount} random images. Click a thumbnail to view the full image.`
               : `Selected ${selectedCount} video. Click the thumbnail to view the full video.`,
+        };
+      }
+    }),
+  );
+});
+
+export const cancelMediaPreviewMessageAtom = atom(null, (_get, set, messageId: string) => {
+  set(
+    workspaceAtom,
+    produce((draft) => {
+      const message = draft.messages.find((item) => item.id === messageId);
+      if (message) {
+        const visibleCount = message.visibleMediaCount ?? 0;
+        message.mediaLoading = false;
+        message.visibleMediaCount = visibleCount;
+        message.cancelled = true;
+        message.content = {
+          "zh-CN": visibleCount > 0 ? `已停止加载，保留 ${visibleCount} 个已显示的预览。` : "已停止加载媒体预览。",
+          "en-US": visibleCount > 0 ? `Stopped loading and kept ${visibleCount} visible preview(s).` : "Stopped loading media previews.",
         };
       }
     }),

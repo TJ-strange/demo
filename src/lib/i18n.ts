@@ -25,6 +25,9 @@ export const resources = {
         mediaPlaceholder: "输入文案图片或者视频",
         send: "发送",
         generating: "生成中",
+        stop: "停止",
+        resume: "继续",
+        queued: "{{count}} 条排队中",
       },
       status: {
         queued: "排队中",
@@ -70,6 +73,9 @@ export const resources = {
         mediaPlaceholder: "Type image or video copy",
         send: "Send",
         generating: "Generating",
+        stop: "Stop",
+        resume: "Resume",
+        queued: "{{count}} queued",
       },
       status: {
         queued: "Queued",
