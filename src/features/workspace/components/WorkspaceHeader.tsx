@@ -17,7 +17,7 @@ export function WorkspaceHeader({ onOpenTasks, onOpenContext }: WorkspaceHeaderP
   const isGenerating = useAtomValue(isGeneratingAtom);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-zinc-200 bg-zinc-50/90 px-3 backdrop-blur-xl dark:border-[#3F3F46] dark:bg-[#202024]/90 sm:px-5">
+    <header className="flex h-15 items-center justify-between border-b border-zinc-200 bg-zinc-50/90 px-3 backdrop-blur-xl dark:border-[#3F3F46] dark:bg-[#202024]/90 sm:px-5">
       <div className="flex min-w-0 items-center gap-3">
         <IconButton label="Open tasks" className="lg:hidden" onClick={onOpenTasks}>
           <PanelLeft size={18} />

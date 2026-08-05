@@ -13,6 +13,15 @@ const icons: Record<MessageRole, typeof User> = {
   tool: Terminal,
 };
 
+const AUTO_SCROLL_PAUSE_THRESHOLD = 80;
+const AUTO_SCROLL_RESUME_THRESHOLD = 12;
+const AUTO_SCROLL_HIDE_SCROLLBAR_MS = 180;
+const SCROLL_DIRECTION_EPSILON = 2;
+
+function getDistanceToBottom(scrollElement: HTMLDivElement) {
+  return scrollElement.scrollHeight - scrollElement.scrollTop - scrollElement.clientHeight;
+}
+
 export function ConversationPanel() {
   const { t } = useTranslation();
   const messages = useAtomValue(currentMessagesAtom);
@@ -20,6 +29,12 @@ export function ConversationPanel() {
   const locale = useAtomValue(localeAtom);
   const requestResumeMessage = useSetAtom(resumeMessageRequestAtom);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const lastScrollTopRef = useRef(0);
+  const lastUserMessageIdRef = useRef<string | null>(null);
+  const autoScrollTimerRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [viewer, setViewer] = useState<{ assetIds: string[]; index: number } | null>(null);
   const mediaById = useMemo(
     () => new Map(workspace.media.map((asset) => [asset.id, asset])),
@@ -31,20 +46,103 @@ export function ConversationPanel() {
   }, [mediaById, viewer]);
   const activeAsset = viewer ? viewerAssets[viewer.index] : undefined;
 
-  useEffect(() => {
+  function updateAutoScrollPreference() {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
 
-    // 只滚动消息列表容器，避免 scrollIntoView 把整个页面推下去，导致输入框离开视口。
-    // 这里依赖 messages 数组变化触发，所以用户消息和 assistant 流式 chunk 都会自动跟随到底部。
-    scrollElement.scrollTo({
-      top: scrollElement.scrollHeight,
-      behavior: "smooth",
+    const distanceToBottom = getDistanceToBottom(scrollElement);
+    const isScrollingUp = scrollElement.scrollTop < lastScrollTopRef.current - SCROLL_DIRECTION_EPSILON;
+
+    // 用户向上滚动时立即暂停；只有真正回到底部附近时才恢复自动跟随。
+    if (isScrollingUp) {
+      shouldAutoScrollRef.current = false;
+    } else if (distanceToBottom < AUTO_SCROLL_RESUME_THRESHOLD) {
+      shouldAutoScrollRef.current = true;
+    } else if (distanceToBottom > AUTO_SCROLL_PAUSE_THRESHOLD) {
+      shouldAutoScrollRef.current = false;
+    }
+
+    lastScrollTopRef.current = scrollElement.scrollTop;
+  }
+
+  function markAutoScrolling() {
+    setIsAutoScrolling(true);
+    if (autoScrollTimerRef.current) {
+      window.clearTimeout(autoScrollTimerRef.current);
+    }
+    autoScrollTimerRef.current = window.setTimeout(() => {
+      setIsAutoScrolling(false);
+      autoScrollTimerRef.current = null;
+    }, AUTO_SCROLL_HIDE_SCROLLBAR_MS);
+  }
+
+  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
+    if (event.deltaY < 0) {
+      shouldAutoScrollRef.current = false;
+    }
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    touchStartYRef.current = event.touches[0]?.clientY ?? null;
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    const startY = touchStartYRef.current;
+    const currentY = event.touches[0]?.clientY;
+    if (startY === null || currentY === undefined) return;
+
+    if (currentY > startY + SCROLL_DIRECTION_EPSILON) {
+      shouldAutoScrollRef.current = false;
+    }
+  }
+
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    const lastUserMessage = messages.findLast((message) => message.role === "user");
+    const hasNewUserMessage = Boolean(lastUserMessage) && lastUserMessage?.id !== lastUserMessageIdRef.current;
+
+    if (hasNewUserMessage) {
+      // 用户主动发送新消息，说明他的注意力回到最新上下文，此时应恢复自动跟随。
+      shouldAutoScrollRef.current = true;
+    }
+    lastUserMessageIdRef.current = lastUserMessage?.id ?? null;
+
+    if (!scrollElement || !shouldAutoScrollRef.current) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      markAutoScrolling();
+      // 只滚动消息列表容器，避免 scrollIntoView 把整个页面推下去，导致输入框离开视口。
+      // 用户还在底部附近时才自动跟随；如果用户手动上滚查看历史，就尊重他的阅读位置。
+      scrollElement.scrollTo({
+        top: scrollElement.scrollHeight,
+        behavior: "auto",
+      });
+      lastScrollTopRef.current = scrollElement.scrollTop;
     });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [messages]);
 
+  useEffect(
+    () => () => {
+      if (autoScrollTimerRef.current) {
+        window.clearTimeout(autoScrollTimerRef.current);
+      }
+    },
+    [],
+  );
+
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6">
+    <div
+      ref={scrollRef}
+      onScroll={updateAutoScrollPreference}
+      onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      className={`conversation-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6 ${
+        isAutoScrolling ? "is-auto-scrolling" : ""
+      }`}
+    >
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
         {messages.map((message) => {
           const Icon = icons[message.role];

@@ -68,6 +68,7 @@ export function Composer() {
   const locale = useAtomValue(localeAtom);
   const taskId = useAtomValue(currentTaskIdAtom);
   const currentTask = useAtomValue(currentTaskAtom);
+  
   const setGenerating = useSetAtom(isGeneratingAtom);
   const addUserMessage = useSetAtom(addUserMessageAtom);
   const createMediaPreviewMessage = useSetAtom(createMediaPreviewMessageAtom);
