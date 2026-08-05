@@ -5,7 +5,6 @@ import {
   currentTaskIdAtom,
   leftDrawerOpenAtom,
   rightDrawerOpenAtom,
-  selectedAssetIdAtom,
   themeAtom,
 } from "../../state/workspaceState";
 import { TaskSidebar } from "./components/TaskSidebar";
@@ -16,9 +15,8 @@ import { Composer } from "./components/Composer";
 import { MobileDrawer } from "./components/MobileDrawer";
 
 export function WorkspacePage() {
-  const params = useParams<{ taskId?: string; assetId?: string }>();
+  const params = useParams<{ taskId?: string }>();
   const setTaskId = useSetAtom(currentTaskIdAtom);
-  const setAssetId = useSetAtom(selectedAssetIdAtom);
   const [leftOpen, setLeftOpen] = useAtom(leftDrawerOpenAtom);
   const [rightOpen, setRightOpen] = useAtom(rightDrawerOpenAtom);
   const theme = useAtomValue(themeAtom);
@@ -28,13 +26,6 @@ export function WorkspacePage() {
       setTaskId(params.taskId);
     }
   }, [params.taskId, setTaskId]);
-
-  useEffect(() => {
-    if (params.assetId) {
-      setAssetId(params.assetId);
-      setRightOpen(true);
-    }
-  }, [params.assetId, setAssetId, setRightOpen]);
 
   useEffect(() => {
     // 主题状态存在 Jotai 里，最终通过 html.dark 触发 Tailwind v4 的 dark variant。

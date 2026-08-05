@@ -96,14 +96,14 @@ function MediaPanel() {
             onClick={() => setSelectedAssetId(asset.id)}
             className={`interactive rounded-lg border p-3 text-left transition ${
               selectedAssetId === asset.id
-                ? "border-zinc-950 bg-zinc-950 text-white dark:border-zinc-200 dark:bg-zinc-100 dark:text-zinc-950"
+                ? "border-zinc-950 bg-zinc-950 dark:border-zinc-200 dark:bg-zinc-100"
                 : "border-zinc-200 bg-white dark:border-[#3F3F46] dark:bg-[#27272A]"
             }`}
           >
             <div className="mb-3 grid aspect-video place-items-center rounded-md bg-zinc-100 dark:bg-[#202024]">
               {asset.kind === "video" ? <MonitorPlay size={22} /> : <Image size={22} />}
             </div>
-            <p className="truncate text-xs font-medium">{getLocalizedText(asset.title, locale)}</p>
+            <p className={`truncate text-xs font-medium ${selectedAssetId === asset.id ? "text-white dark:text-zinc-950" : ""}`}>{getLocalizedText(asset.title, locale)}</p>
           </button>
         ))}
       </div>
