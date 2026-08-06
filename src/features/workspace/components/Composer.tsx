@@ -154,11 +154,12 @@ export function Composer() {
     resumeSessionsRef.current[assistantId] = session;
 
     try {
-      // mockAssistantStream 是一个 async generator，用 for await 模拟真实 SSE/流式接口。
+      // 这里 async generator + for await 在模拟 SSE
       for await (const streamItem of streamMockPlan(session.plan, session.nextIndex, signal)) {
         appendChunk({ messageId: assistantId, locale: session.locale, chunk: streamItem.chunk });
         session.nextIndex = streamItem.nextIndex;
       }
+
       finishMessage(assistantId);
       delete resumeSessionsRef.current[assistantId];
       setTaskStatus({ taskId: item.taskId, status: "completed" });
@@ -273,6 +274,9 @@ export function Composer() {
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
+                // 中文输入法组合中的回车只用于上屏/选词，不能当发送。
+                // 否则会先 setValue("") 再被 compositionend 写回，出现“已发送但输入框还留着字”。
+                if (event.nativeEvent.isComposing) return;
                 event.preventDefault();
                 handleSubmit();
               }

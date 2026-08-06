@@ -82,12 +82,3 @@ export async function* streamMockPlan(plan: MockStreamPlan, startIndex: number, 
     };
   }
 }
-
-export async function* mockAssistantStream(locale: Locale, signal?: AbortSignal) {
-  const plan = createMockStreamPlan(locale);
-
-  for await (const item of streamMockPlan(plan, 0, signal)) {
-    // eslint-disable-next-line no-await-in-loop -- streaming chunks must arrive sequentially.
-    yield item.chunk;
-  }
-}
